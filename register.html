@@ -1,0 +1,875 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EventFlow — Admin Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #18181f;
+    --border: #2a2a35;
+    --accent: #6c63ff;
+    --accent2: #ff6584;
+    --accent3: #43e97b;
+    --text: #f0f0f8;
+    --muted: #7070a0;
+    --card-shadow: 0 8px 40px rgba(108,99,255,0.12);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+  h1,h2,h3,h4 { font-family: 'Syne', sans-serif; }
+
+  /* ── SETUP SCREEN ── */
+  #setup-screen {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 2rem;
+    background: radial-gradient(ellipse at 60% 0%, rgba(108,99,255,0.18) 0%, transparent 60%),
+                radial-gradient(ellipse at 10% 90%, rgba(255,101,132,0.12) 0%, transparent 50%),
+                var(--bg);
+  }
+  .setup-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; padding: 3rem; max-width: 520px; width: 100%;
+    box-shadow: var(--card-shadow);
+  }
+  .logo { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800; letter-spacing: -1px; margin-bottom: .3rem; }
+  .logo span { color: var(--accent); }
+  .setup-card p.sub { color: var(--muted); margin-bottom: 2rem; font-size: .95rem; }
+  .field { margin-bottom: 1.2rem; }
+  .field label { display: block; font-size: .82rem; font-weight: 500; color: var(--muted); margin-bottom: .4rem; letter-spacing: .05em; text-transform: uppercase; }
+  .field input, .field textarea, .field select {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: .75rem 1rem; color: var(--text); font-family: 'DM Sans', sans-serif;
+    font-size: .95rem; transition: border .2s;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus { outline: none; border-color: var(--accent); }
+  .field textarea { resize: vertical; min-height: 80px; }
+  .btn-primary {
+    background: var(--accent); color: #fff; border: none; border-radius: 10px;
+    padding: .85rem 1.8rem; font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700;
+    cursor: pointer; transition: opacity .2s, transform .15s; width: 100%;
+  }
+  .btn-primary:hover { opacity: .9; transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+  .hint { font-size: .82rem; color: var(--muted); margin-top: .4rem; }
+  .hint a { color: var(--accent); }
+
+  /* ── MAIN LAYOUT ── */
+  #app { display: none; min-height: 100vh; }
+  .sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0; width: 220px;
+    background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; z-index: 100; padding: 1.5rem 0;
+  }
+  .sidebar-logo { padding: 0 1.5rem 1.5rem; border-bottom: 1px solid var(--border); }
+  .sidebar-logo h1 { font-size: 1.3rem; font-weight: 800; }
+  .sidebar-logo h1 span { color: var(--accent); }
+  .nav { padding: 1.2rem 0; flex: 1; }
+  .nav-item {
+    display: flex; align-items: center; gap: .8rem; padding: .7rem 1.5rem;
+    color: var(--muted); cursor: pointer; transition: all .2s; font-size: .9rem; font-weight: 500;
+  }
+  .nav-item:hover { color: var(--text); background: var(--surface2); }
+  .nav-item.active { color: var(--accent); background: rgba(108,99,255,.1); border-right: 3px solid var(--accent); }
+  .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .main { margin-left: 220px; padding: 2rem; min-height: 100vh; }
+  .page { display: none; }
+  .page.active { display: block; }
+  .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; }
+  .page-header h2 { font-size: 1.7rem; font-weight: 800; }
+  .tag { font-size: .75rem; padding: .25rem .7rem; border-radius: 20px; font-weight: 600; letter-spacing: .05em; }
+  .tag-live { background: rgba(67,233,123,.15); color: var(--accent3); }
+
+  /* ── STATS ── */
+  .stats-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1.2rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 1.5rem; position: relative; overflow: hidden;
+  }
+  .stat-card::before {
+    content: ''; position: absolute; top: -30%; right: -10%; width: 100px; height: 100px;
+    border-radius: 50%; opacity: .08;
+  }
+  .stat-card:nth-child(1)::before { background: var(--accent); }
+  .stat-card:nth-child(2)::before { background: var(--accent2); }
+  .stat-card:nth-child(3)::before { background: var(--accent3); }
+  .stat-label { font-size: .78rem; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: .5rem; }
+  .stat-value { font-family: 'Syne', sans-serif; font-size: 2.2rem; font-weight: 800; }
+  .stat-sub { font-size: .8rem; color: var(--muted); margin-top: .3rem; }
+
+  /* ── TABLE ── */
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  .table-header { display: flex; align-items: center; justify-content: space-between; padding: 1.2rem 1.5rem; border-bottom: 1px solid var(--border); }
+  .table-header h3 { font-size: 1rem; font-weight: 700; }
+  .search-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: .5rem .9rem; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: .88rem; width: 220px; }
+  .search-box:focus { outline: none; border-color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; }
+  th { font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: .85rem 1.5rem; text-align: left; border-bottom: 1px solid var(--border); font-family: 'Syne', sans-serif; }
+  td { padding: .9rem 1.5rem; font-size: .9rem; border-bottom: 1px solid rgba(255,255,255,.04); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,.02); }
+  .badge { display: inline-flex; align-items: center; gap: .35rem; font-size: .75rem; padding: .2rem .65rem; border-radius: 20px; font-weight: 600; }
+  .badge-confirmed { background: rgba(67,233,123,.12); color: var(--accent3); }
+  .btn-sm {
+    padding: .35rem .8rem; font-size: .8rem; border-radius: 7px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--surface2); color: var(--text);
+    font-family: 'Syne', sans-serif; font-weight: 600; transition: all .15s;
+  }
+  .btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-sm.danger:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  /* ── EVENTS LIST ── */
+  .events-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.2rem; }
+  .event-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 1.4rem; transition: border-color .2s, transform .2s;
+  }
+  .event-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .event-title { font-family: 'Syne', sans-serif; font-size: 1.05rem; font-weight: 700; margin-bottom: .4rem; }
+  .event-meta { font-size: .83rem; color: var(--muted); margin-bottom: 1rem; display: flex; gap: .8rem; flex-wrap: wrap; }
+  .event-meta span { display: flex; align-items: center; gap: .3rem; }
+  .event-actions { display: flex; gap: .6rem; flex-wrap: wrap; }
+  .link-box {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    padding: .6rem .9rem; font-size: .8rem; color: var(--accent); font-family: monospace;
+    display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin: .8rem 0;
+    word-break: break-all;
+  }
+  .copy-btn { cursor: pointer; color: var(--muted); flex-shrink: 0; }
+  .copy-btn:hover { color: var(--accent); }
+
+  /* ── CREATE EVENT FORM ── */
+  .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 2rem; max-width: 720px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+  .span2 { grid-column: span 2; }
+  .btn-group { display: flex; gap: .8rem; margin-top: 1.5rem; }
+  .btn-secondary {
+    background: transparent; color: var(--text); border: 1px solid var(--border); border-radius: 10px;
+    padding: .85rem 1.8rem; font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700;
+    cursor: pointer; transition: all .2s;
+  }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.75); display: none;
+    align-items: center; justify-content: center; z-index: 999; padding: 1rem;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+    padding: 2rem; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto;
+    box-shadow: var(--card-shadow);
+  }
+  .modal h3 { font-size: 1.3rem; font-weight: 800; margin-bottom: 1rem; }
+  .modal-close { float: right; cursor: pointer; color: var(--muted); font-size: 1.3rem; background: none; border: none; }
+  .attendee-info { margin-bottom: 1rem; }
+  .attendee-info .info-row { display: flex; justify-content: space-between; padding: .55rem 0; border-bottom: 1px solid var(--border); font-size: .9rem; }
+  .attendee-info .info-row .label { color: var(--muted); }
+  #qr-display { display: flex; flex-direction: column; align-items: center; margin: 1.5rem 0; }
+  #qr-display canvas, #qr-display img { border-radius: 8px; }
+  #qr-display p { font-size: .8rem; color: var(--muted); margin-top: .5rem; }
+
+  /* ── SCAN PAGE ── */
+  .scan-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 2rem; max-width: 560px; }
+  #scan-video { width: 100%; border-radius: 10px; background: #000; }
+  #scan-result { margin-top: 1.5rem; display: none; }
+  .scan-attendee { background: var(--surface2); border-radius: 12px; padding: 1.5rem; }
+  .scan-attendee h4 { font-size: 1.1rem; font-weight: 700; margin-bottom: .8rem; color: var(--accent3); }
+  .scan-row { display: flex; justify-content: space-between; padding: .45rem 0; border-bottom: 1px solid var(--border); font-size: .88rem; }
+  .scan-row .label { color: var(--muted); }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed; bottom: 2rem; right: 2rem; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 10px; padding: .8rem 1.3rem;
+    font-size: .9rem; z-index: 9999; transform: translateY(100px); opacity: 0;
+    transition: all .3s; pointer-events: none; max-width: 320px;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.success { border-color: var(--accent3); color: var(--accent3); }
+  #toast.error { border-color: var(--accent2); color: var(--accent2); }
+  .empty-state { text-align: center; padding: 3rem; color: var(--muted); }
+  .empty-state svg { opacity: .3; margin-bottom: 1rem; }
+  .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid rgba(255,255,255,.2); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-row td { text-align: center; padding: 2rem; }
+
+  /* ── CONFIG BAR ── */
+  .config-bar { background: rgba(108,99,255,.08); border: 1px solid rgba(108,99,255,.25); border-radius: 10px; padding: .7rem 1.2rem; display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; font-size: .85rem; }
+  .config-bar span { color: var(--muted); }
+  .config-bar strong { color: var(--accent); font-family: monospace; }
+  .btn-tiny { font-size: .75rem; padding: .25rem .6rem; border-radius: 6px; cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--muted); }
+  .btn-tiny:hover { color: var(--accent2); border-color: var(--accent2); }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  @media (max-width: 768px) {
+    .sidebar { transform: translateX(-100%); }
+    .main { margin-left: 0; }
+    .stats-grid { grid-template-columns: 1fr; }
+    .form-grid { grid-template-columns: 1fr; }
+    .span2 { grid-column: span 1; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════ SETUP SCREEN ══════════════ -->
+<div id="setup-screen">
+  <div class="setup-card">
+    <div class="logo">Event<span>Flow</span></div>
+    <p class="sub">Connect your Supabase project to get started.</p>
+    <div class="field">
+      <label>Supabase Project URL</label>
+      <input type="text" id="cfg-url" placeholder="https://xxxx.supabase.co" />
+    </div>
+    <div class="field">
+      <label>Supabase Anon Key</label>
+      <input type="text" id="cfg-key" placeholder="eyJhbGc..." />
+      <p class="hint">Found in your Supabase project → Settings → API. <a href="https://supabase.com/dashboard" target="_blank">Open Dashboard ↗</a></p>
+    </div>
+    <button class="btn-primary" id="cfg-connect">Connect & Initialize</button>
+    <p class="hint" style="margin-top:1rem;text-align:center" id="cfg-status"></p>
+  </div>
+</div>
+
+<!-- ══════════════ MAIN APP ══════════════ -->
+<div id="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo"><h1>Event<span>Flow</span></h1></div>
+    <nav class="nav">
+      <div class="nav-item active" data-page="dashboard">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        Dashboard
+      </div>
+      <div class="nav-item" data-page="events">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        My Events
+      </div>
+      <div class="nav-item" data-page="create">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        Create Event
+      </div>
+      <div class="nav-item" data-page="attendees">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        All Attendees
+      </div>
+      <div class="nav-item" data-page="scan">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+        QR Scanner
+      </div>
+    </nav>
+    <div style="padding:1rem 1.5rem; border-top:1px solid var(--border)">
+      <button class="btn-tiny" onclick="resetConfig()">⚙ Change Config</button>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main">
+
+    <!-- DASHBOARD PAGE -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <h2>Dashboard</h2>
+        <span class="tag tag-live">● Live</span>
+      </div>
+      <div id="cfg-bar" class="config-bar" style="display:none">
+        <span>Connected to: <strong id="cfg-url-display"></strong></span>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Total Events</div>
+          <div class="stat-value" id="stat-events">—</div>
+          <div class="stat-sub">All time</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Attendees</div>
+          <div class="stat-value" id="stat-attendees">—</div>
+          <div class="stat-sub">Registered</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Upcoming Events</div>
+          <div class="stat-value" id="stat-upcoming">—</div>
+          <div class="stat-sub">Scheduled ahead</div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <h3>Recent Registrations</h3>
+        </div>
+        <table>
+          <thead><tr><th>Name</th><th>Event</th><th>Contact</th><th>Registered</th><th>Status</th></tr></thead>
+          <tbody id="recent-table"><tr class="loading-row"><td colspan="5"><div class="spinner"></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- EVENTS PAGE -->
+    <div class="page" id="page-events">
+      <div class="page-header">
+        <h2>My Events</h2>
+        <button class="btn-primary" style="width:auto;padding:.7rem 1.4rem" onclick="navigate('create')">+ New Event</button>
+      </div>
+      <div class="events-grid" id="events-grid">
+        <div class="empty-state"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- CREATE EVENT PAGE -->
+    <div class="page" id="page-create">
+      <div class="page-header"><h2>Create New Event</h2></div>
+      <div class="form-card">
+        <div class="form-grid">
+          <div class="field span2">
+            <label>Event Title *</label>
+            <input type="text" id="ev-title" placeholder="e.g. Web Dev Summit 2025" />
+          </div>
+          <div class="field span2">
+            <label>Description</label>
+            <textarea id="ev-desc" placeholder="Tell attendees about this event..."></textarea>
+          </div>
+          <div class="field">
+            <label>Date *</label>
+            <input type="date" id="ev-date" />
+          </div>
+          <div class="field">
+            <label>Time</label>
+            <input type="time" id="ev-time" />
+          </div>
+          <div class="field">
+            <label>Location / Venue</label>
+            <input type="text" id="ev-location" placeholder="e.g. Cebu City Convention Center" />
+          </div>
+          <div class="field">
+            <label>Max Capacity (optional)</label>
+            <input type="number" id="ev-capacity" placeholder="e.g. 200" />
+          </div>
+          <div class="field span2">
+            <label>Organizer / Organization</label>
+            <input type="text" id="ev-org" placeholder="e.g. TechHub Cebu" />
+          </div>
+        </div>
+        <div class="btn-group">
+          <button class="btn-primary" style="width:auto;padding:.85rem 2rem" id="create-btn" onclick="createEvent()">Create Event & Generate Link</button>
+          <button class="btn-secondary" onclick="navigate('events')">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ATTENDEES PAGE -->
+    <div class="page" id="page-attendees">
+      <div class="page-header">
+        <h2>All Attendees</h2>
+        <input type="text" class="search-box" id="attendee-search" placeholder="🔍 Search name, email..." oninput="filterAttendees()" />
+      </div>
+      <div class="table-wrap">
+        <div class="table-header"><h3>Registered Attendees</h3><span id="att-count" class="tag tag-live"></span></div>
+        <table>
+          <thead><tr><th>Full Name</th><th>Email</th><th>Contact No.</th><th>Event</th><th>Registered</th><th>Actions</th></tr></thead>
+          <tbody id="attendees-table"><tr class="loading-row"><td colspan="6"><div class="spinner"></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- QR SCANNER PAGE -->
+    <div class="page" id="page-scan">
+      <div class="page-header"><h2>QR Scanner</h2></div>
+      <div class="scan-card">
+        <p style="color:var(--muted);margin-bottom:1rem;font-size:.9rem">Point camera at attendee's QR code to verify their registration.</p>
+        <video id="scan-video" autoplay playsinline></video>
+        <div style="display:flex;gap:.8rem;margin-top:1rem">
+          <button class="btn-primary" style="width:auto;padding:.7rem 1.4rem" onclick="startScanner()">📷 Start Camera</button>
+          <button class="btn-secondary" onclick="stopScanner()">Stop</button>
+        </div>
+        <div id="scan-result">
+          <div class="scan-attendee">
+            <h4>✅ Attendee Verified</h4>
+            <div id="scan-data"></div>
+          </div>
+        </div>
+        <canvas id="scan-canvas" style="display:none"></canvas>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══════════════ ATTENDEE MODAL (QR) ══════════════ -->
+<div class="modal-overlay" id="qr-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('qr-modal')">✕</button>
+    <h3>Attendee QR Code</h3>
+    <div class="attendee-info" id="modal-info"></div>
+    <div id="qr-display"></div>
+    <button class="btn-primary" onclick="downloadQR()">⬇ Download QR Code</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+// STATE & CONFIG
+// ═══════════════════════════════════════════════
+let SUPABASE_URL = localStorage.getItem('ef_url') || '';
+let SUPABASE_KEY = localStorage.getItem('ef_key') || '';
+let allAttendees = [];
+let scanInterval = null;
+let scanStream = null;
+
+// ═══════════════════════════════════════════════
+// SUPABASE HELPER
+// ═══════════════════════════════════════════════
+async function sb(path, method='GET', body=null) {
+  const opts = {
+    method,
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': method==='POST' ? 'return=representation' : ''
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, opts);
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.message || err.hint || 'Supabase error');
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : [];
+}
+
+// ═══════════════════════════════════════════════
+// INIT DB TABLES
+// ═══════════════════════════════════════════════
+async function initDB() {
+  // Use Supabase SQL via RPC or just check if tables exist by querying
+  // We'll handle missing table error gracefully and guide the user
+  try {
+    await sb('events?limit=1');
+    await sb('attendees?limit=1');
+    return true;
+  } catch(e) {
+    return false;
+  }
+}
+
+// ═══════════════════════════════════════════════
+// SETUP / CONFIG
+// ═══════════════════════════════════════════════
+async function connectSupabase() {
+  const url = document.getElementById('cfg-url').value.trim().replace(/\/$/, '');
+  const key = document.getElementById('cfg-key').value.trim();
+  const status = document.getElementById('cfg-status');
+  const btn = document.getElementById('cfg-connect');
+
+  if (!url || !key) { status.textContent = '⚠ Please fill in both fields.'; return; }
+
+  btn.disabled = true; btn.textContent = 'Connecting...'; status.textContent = '';
+  SUPABASE_URL = url; SUPABASE_KEY = key;
+
+  const ok = await initDB();
+  if (ok) {
+    localStorage.setItem('ef_url', url);
+    localStorage.setItem('ef_key', key);
+    showApp();
+  } else {
+    status.innerHTML = `⚠ Could not find the required tables.<br><br>
+    <strong>Run this SQL in your Supabase SQL editor:</strong><br>
+    <a href="${url.replace('https://','https://app.supabase.com/project/').split('.supabase')[0]}/sql" target="_blank" style="color:var(--accent)">Open SQL Editor ↗</a><br><br>
+    <code style="font-size:.75rem;background:#111;padding:.5rem;border-radius:6px;display:block;white-space:pre-wrap">CREATE TABLE events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  description text,
+  date date,
+  time time,
+  location text,
+  capacity int,
+  organizer text,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE attendees (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id uuid REFERENCES events(id) ON DELETE CASCADE,
+  full_name text NOT NULL,
+  email text,
+  contact_number text,
+  organization text,
+  notes text,
+  registered_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE attendees ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "allow all" ON events FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow all" ON attendees FOR ALL USING (true) WITH CHECK (true);</code>
+    <br>After running the SQL, click Connect again.`;
+    SUPABASE_URL = ''; SUPABASE_KEY = '';
+  }
+  btn.disabled = false; btn.textContent = 'Connect & Initialize';
+}
+
+function resetConfig() {
+  localStorage.removeItem('ef_url'); localStorage.removeItem('ef_key');
+  location.reload();
+}
+
+function showApp() {
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('cfg-url-display').textContent = SUPABASE_URL.replace('https://','').split('.')[0];
+  document.getElementById('cfg-bar').style.display = 'flex';
+  loadDashboard();
+}
+
+// Auto-connect if credentials saved
+window.addEventListener('load', () => {
+  if (SUPABASE_URL && SUPABASE_KEY) {
+    initDB().then(ok => ok ? showApp() : null);
+  }
+  document.getElementById('cfg-connect').addEventListener('click', connectSupabase);
+  if (SUPABASE_URL) document.getElementById('cfg-url').value = SUPABASE_URL;
+  if (SUPABASE_KEY) document.getElementById('cfg-key').value = SUPABASE_KEY;
+});
+
+// ═══════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════
+function navigate(page) {
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.page === page);
+  });
+  document.querySelectorAll('.page').forEach(el => {
+    el.classList.toggle('active', el.id === 'page-' + page);
+  });
+  if (page === 'dashboard') loadDashboard();
+  if (page === 'events') loadEvents();
+  if (page === 'attendees') loadAttendees();
+  if (page === 'scan') initScanPage();
+}
+
+document.querySelectorAll('.nav-item').forEach(el => {
+  el.addEventListener('click', () => navigate(el.dataset.page));
+});
+
+// ═══════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════
+async function loadDashboard() {
+  try {
+    const events = await sb('events?select=id,date&order=date.asc');
+    const attendees = await sb('attendees?select=id,full_name,email,contact_number,registered_at,event_id&order=registered_at.desc&limit=20');
+    const allEventsForNames = events;
+
+    document.getElementById('stat-events').textContent = events.length;
+    document.getElementById('stat-attendees').textContent = attendees.length < 20
+      ? attendees.length
+      : await sb('attendees?select=count').then(r => r[0]?.count ?? attendees.length);
+
+    const today = new Date().toISOString().split('T')[0];
+    const upcoming = events.filter(e => e.date >= today).length;
+    document.getElementById('stat-upcoming').textContent = upcoming;
+
+    // Get event names
+    const eventMap = {};
+    for (const e of allEventsForNames) eventMap[e.id] = e;
+    const allEvDetails = await sb('events?select=id,title');
+    for (const e of allEvDetails) eventMap[e.id] = e;
+
+    const tbody = document.getElementById('recent-table');
+    if (!attendees.length) {
+      tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">No registrations yet.</div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = attendees.slice(0,10).map(a => `
+      <tr>
+        <td><strong>${esc(a.full_name)}</strong></td>
+        <td>${esc(eventMap[a.event_id]?.title || '—')}</td>
+        <td>${esc(a.contact_number || a.email || '—')}</td>
+        <td>${formatDate(a.registered_at)}</td>
+        <td><span class="badge badge-confirmed">✓ Confirmed</span></td>
+      </tr>`).join('');
+  } catch(e) { showToast('Failed to load dashboard: ' + e.message, 'error'); }
+}
+
+// ═══════════════════════════════════════════════
+// EVENTS
+// ═══════════════════════════════════════════════
+async function loadEvents() {
+  const grid = document.getElementById('events-grid');
+  grid.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+  try {
+    const events = await sb('events?order=created_at.desc');
+    if (!events.length) {
+      grid.innerHTML = `<div class="empty-state"><svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg><p>No events yet. Create your first!</p></div>`;
+      return;
+    }
+    // Get attendee counts
+    const counts = await sb('attendees?select=event_id');
+    const countMap = {};
+    for (const a of counts) countMap[a.event_id] = (countMap[a.event_id]||0) + 1;
+
+    grid.innerHTML = events.map(e => {
+      const link = getRegistrationLink(e.id);
+      return `<div class="event-card">
+        <div class="event-title">${esc(e.title)}</div>
+        <div class="event-meta">
+          <span>📅 ${e.date ? formatDateShort(e.date) : 'TBD'}</span>
+          <span>📍 ${esc(e.location || 'TBD')}</span>
+          <span>👥 ${countMap[e.id]||0}${e.capacity?' / '+e.capacity:''} registered</span>
+        </div>
+        <div class="link-box">
+          <span>${link}</span>
+          <span class="copy-btn" onclick="copyLink('${link}')">📋</span>
+        </div>
+        <div class="event-actions">
+          <button class="btn-sm" onclick="navigate('attendees');filterByEvent('${e.id}')">View Attendees</button>
+          <button class="btn-sm" onclick="copyLink('${link}')">Copy Link</button>
+          <button class="btn-sm danger" onclick="deleteEvent('${e.id}')">Delete</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+function getRegistrationLink(eventId) {
+  return `${location.origin}${location.pathname.replace('index.html','')}register.html?event=${eventId}`;
+}
+
+function copyLink(link) {
+  navigator.clipboard.writeText(link).then(() => showToast('Link copied!', 'success'));
+}
+
+async function createEvent() {
+  const title = document.getElementById('ev-title').value.trim();
+  const date = document.getElementById('ev-date').value;
+  if (!title || !date) { showToast('Title and date are required', 'error'); return; }
+
+  const btn = document.getElementById('create-btn');
+  btn.disabled = true; btn.textContent = 'Creating...';
+  try {
+    const ev = await sb('events', 'POST', {
+      title,
+      description: document.getElementById('ev-desc').value.trim() || null,
+      date,
+      time: document.getElementById('ev-time').value || null,
+      location: document.getElementById('ev-location').value.trim() || null,
+      capacity: parseInt(document.getElementById('ev-capacity').value) || null,
+      organizer: document.getElementById('ev-org').value.trim() || null,
+    });
+    const created = Array.isArray(ev) ? ev[0] : ev;
+    const link = getRegistrationLink(created.id);
+    showToast('Event created! Link ready.', 'success');
+    // Clear form
+    ['ev-title','ev-desc','ev-date','ev-time','ev-location','ev-capacity','ev-org'].forEach(id => document.getElementById(id).value = '');
+    navigate('events');
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+  btn.disabled = false; btn.textContent = 'Create Event & Generate Link';
+}
+
+async function deleteEvent(id) {
+  if (!confirm('Delete this event and all its attendees?')) return;
+  try {
+    await sb(`events?id=eq.${id}`, 'DELETE');
+    showToast('Event deleted', 'success');
+    loadEvents();
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+// ═══════════════════════════════════════════════
+// ATTENDEES
+// ═══════════════════════════════════════════════
+let currentEventFilter = null;
+
+async function loadAttendees() {
+  const tbody = document.getElementById('attendees-table');
+  tbody.innerHTML = `<tr class="loading-row"><td colspan="6"><div class="spinner"></div></td></tr>`;
+  try {
+    let query = 'attendees?select=*&order=registered_at.desc';
+    if (currentEventFilter) query += `&event_id=eq.${currentEventFilter}`;
+    allAttendees = await sb(query);
+
+    const events = await sb('events?select=id,title');
+    const eventMap = {};
+    for (const e of events) eventMap[e.id] = e.title;
+
+    allAttendees._eventMap = eventMap;
+    document.getElementById('att-count').textContent = allAttendees.length + ' total';
+    renderAttendees(allAttendees, eventMap);
+    currentEventFilter = null;
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+function renderAttendees(list, eventMap) {
+  const tbody = document.getElementById('attendees-table');
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state">No attendees found.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(a => `
+    <tr>
+      <td><strong>${esc(a.full_name)}</strong></td>
+      <td>${esc(a.email || '—')}</td>
+      <td>${esc(a.contact_number || '—')}</td>
+      <td>${esc((eventMap||allAttendees._eventMap||{})[a.event_id] || '—')}</td>
+      <td>${formatDate(a.registered_at)}</td>
+      <td><button class="btn-sm" onclick="showQR('${a.id}')">QR Code</button></td>
+    </tr>`).join('');
+}
+
+function filterAttendees() {
+  const q = document.getElementById('attendee-search').value.toLowerCase();
+  const filtered = allAttendees.filter(a =>
+    a.full_name?.toLowerCase().includes(q) ||
+    a.email?.toLowerCase().includes(q) ||
+    a.contact_number?.toLowerCase().includes(q)
+  );
+  renderAttendees(filtered, allAttendees._eventMap);
+}
+
+function filterByEvent(eventId) {
+  currentEventFilter = eventId;
+  loadAttendees();
+}
+
+// ═══════════════════════════════════════════════
+// QR CODE
+// ═══════════════════════════════════════════════
+async function showQR(attendeeId) {
+  try {
+    const [a] = await sb(`attendees?id=eq.${attendeeId}`);
+    const events = await sb(`events?id=eq.${a.event_id}`);
+    const ev = events[0] || {};
+
+    document.getElementById('modal-info').innerHTML = `
+      <div class="attendee-info">
+        <div class="info-row"><span class="label">Name</span><span>${esc(a.full_name)}</span></div>
+        <div class="info-row"><span class="label">Email</span><span>${esc(a.email||'—')}</span></div>
+        <div class="info-row"><span class="label">Contact</span><span>${esc(a.contact_number||'—')}</span></div>
+        <div class="info-row"><span class="label">Organization</span><span>${esc(a.organization||'—')}</span></div>
+        <div class="info-row"><span class="label">Event</span><span>${esc(ev.title||'—')}</span></div>
+        <div class="info-row"><span class="label">Date</span><span>${ev.date ? formatDateShort(ev.date) : '—'}</span></div>
+      </div>`;
+
+    const qrDiv = document.getElementById('qr-display');
+    qrDiv.innerHTML = '';
+    const qrData = JSON.stringify({ id: a.id, name: a.full_name, event: ev.title, contact: a.contact_number, email: a.email });
+    new QRCode(qrDiv, { text: qrData, width: 200, height: 200, colorDark: '#ffffff', colorLight: '#111118', correctLevel: QRCode.CorrectLevel.H });
+    qrDiv.innerHTML += '<p>Scan this at the event entrance</p>';
+    openModal('qr-modal');
+  } catch(e) { showToast('Error loading QR: ' + e.message, 'error'); }
+}
+
+function downloadQR() {
+  const canvas = document.querySelector('#qr-display canvas');
+  if (!canvas) return;
+  const a = document.createElement('a');
+  a.download = 'attendee-qr.png';
+  a.href = canvas.toDataURL();
+  a.click();
+}
+
+// ═══════════════════════════════════════════════
+// QR SCANNER
+// ═══════════════════════════════════════════════
+function initScanPage() {}
+
+async function startScanner() {
+  try {
+    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    const video = document.getElementById('scan-video');
+    video.srcObject = scanStream;
+    video.play();
+    const canvas = document.getElementById('scan-canvas');
+    const ctx = canvas.getContext('2d');
+
+    scanInterval = setInterval(() => {
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        // Use jsQR if available
+        if (window.jsQR) {
+          const code = jsQR(imageData.data, imageData.width, imageData.height);
+          if (code) processQRData(code.data);
+        }
+      }
+    }, 300);
+    showToast('Camera started!', 'success');
+  } catch(e) { showToast('Camera error: ' + e.message, 'error'); }
+}
+
+function stopScanner() {
+  if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
+  if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+  document.getElementById('scan-video').srcObject = null;
+}
+
+async function processQRData(data) {
+  stopScanner();
+  try {
+    const parsed = JSON.parse(data);
+    if (!parsed.id) throw new Error('Invalid QR');
+    const [a] = await sb(`attendees?id=eq.${parsed.id}`);
+    if (!a) throw new Error('Attendee not found');
+    const [ev] = await sb(`events?id=eq.${a.event_id}`);
+    const scanResult = document.getElementById('scan-result');
+    const scanData = document.getElementById('scan-data');
+    scanData.innerHTML = `
+      <div class="scan-row"><span class="label">Full Name</span><span>${esc(a.full_name)}</span></div>
+      <div class="scan-row"><span class="label">Email</span><span>${esc(a.email||'—')}</span></div>
+      <div class="scan-row"><span class="label">Contact</span><span>${esc(a.contact_number||'—')}</span></div>
+      <div class="scan-row"><span class="label">Organization</span><span>${esc(a.organization||'—')}</span></div>
+      <div class="scan-row"><span class="label">Event</span><span>${esc(ev?.title||'—')}</span></div>
+      <div class="scan-row"><span class="label">Registered</span><span>${formatDate(a.registered_at)}</span></div>
+    `;
+    scanResult.style.display = 'block';
+    showToast('Attendee verified!', 'success');
+  } catch(e) { showToast('QR Error: ' + e.message, 'error'); }
+}
+
+// Load jsQR dynamically
+const jsQRScript = document.createElement('script');
+jsQRScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js';
+document.head.appendChild(jsQRScript);
+
+// ═══════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function formatDate(d) { if(!d) return '—'; return new Date(d).toLocaleDateString('en-PH', {year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}); }
+function formatDateShort(d) { if(!d) return '—'; return new Date(d+'T00:00:00').toLocaleDateString('en-PH', {year:'numeric',month:'short',day:'numeric'}); }
+
+let toastTimer;
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = '', 3000);
+}
+
+// Close modal on backdrop click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+</script>
+</body>
+</html>
