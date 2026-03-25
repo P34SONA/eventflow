@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EventFlow — Discover & Host Events</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,600;0,700;0,900;1,300;1,600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a25;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #f0f0f5;
+    --muted: #7878a0;
+    --accent: #c8ff57;
+    --accent2: #7c3aed;
+    --accent3: #06b6d4;
+    --danger: #ef4444;
+    --success: #22c55e;
+    --gold: #f59e0b;
+    --font-display: 'Fraunces', serif;
+    --font-body: 'DM Sans', sans-serif;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 3px; }
+
+  /* NAV */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 32px;
+    background: rgba(10,10,15,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-logo {
+    font-family: var(--font-display);
+    font-size: 22px; font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -0.5px;
+    cursor: pointer;
+  }
+
+  .nav-logo span { color: var(--text); }
+
+  .nav-links { display: flex; gap: 8px; align-items: center; }
+
+  .nav-btn {
+    padding: 8px 18px; border-radius: 50px;
+    font-family: var(--font-body); font-size: 14px; font-weight: 500;
+    cursor: pointer; border: none; transition: all 0.2s;
+  }
+
+  .nav-btn.ghost {
+    background: transparent; color: var(--muted);
+  }
+  .nav-btn.ghost:hover { color: var(--text); }
+
+  .nav-btn.primary {
+    background: var(--accent); color: #0a0a0f;
+  }
+  .nav-btn.primary:hover { opacity: 0.9; transform: translateY(-1px); }
+
+  /* VIEWS */
+  .view { display: none; padding-top: 72px; min-height: 100vh; }
+  .view.active { display: block; animation: fadeIn 0.3s ease; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* HERO */
+  .hero {
+    padding: 80px 32px 60px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute; top: -100px; left: 50%; transform: translateX(-50%);
+    width: 600px; height: 400px;
+    background: radial-gradient(ellipse, rgba(124,58,237,0.25) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: 50px;
+    background: rgba(200,255,87,0.1); border: 1px solid rgba(200,255,87,0.25);
+    font-size: 12px; font-weight: 600; color: var(--accent);
+    letter-spacing: 0.05em; text-transform: uppercase;
+    margin-bottom: 28px;
+  }
+
+  .hero h1 {
+    font-family: var(--font-display);
+    font-size: clamp(40px, 7vw, 80px);
+    font-weight: 900; line-height: 1.05;
+    letter-spacing: -2px; color: var(--text);
+    margin-bottom: 20px;
+  }
+
+  .hero h1 em { color: var(--accent); font-style: italic; }
+
+  .hero p {
+    font-size: 18px; color: var(--muted); max-width: 480px;
+    margin: 0 auto 36px; line-height: 1.6; font-weight: 300;
+  }
+
+  .hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 14px 28px; border-radius: 50px;
+    font-family: var(--font-body); font-size: 15px; font-weight: 600;
+    cursor: pointer; border: none; transition: all 0.2s; text-decoration: none;
+  }
+
+  .btn-primary { background: var(--accent); color: #0a0a0f; }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(200,255,87,0.35); }
+
+  .btn-outline {
+    background: transparent; color: var(--text);
+    border: 1px solid var(--border2);
+  }
+  .btn-outline:hover { background: var(--surface); border-color: var(--border2); }
+
+  /* SEARCH */
+  .search-section { padding: 0 32px 40px; }
+
+  .search-bar {
+    display: flex; align-items: center; gap: 12px;
+    max-width: 680px; margin: 0 auto;
+    background: var(--surface); border: 1px solid var(--border2);
+    border-radius: 50px; padding: 6px 6px 6px 24px;
+    transition: border-color 0.2s;
+  }
+  .search-bar:focus-within { border-color: var(--accent); }
+
+  .search-bar input {
+    flex: 1; background: none; border: none; outline: none;
+    color: var(--text); font-family: var(--font-body); font-size: 15px;
+  }
+  .search-bar input::placeholder { color: var(--muted); }
+
+  .search-bar button {
+    background: var(--accent); color: #0a0a0f;
+    border: none; border-radius: 50px;
+    padding: 10px 22px; font-weight: 600; font-size: 14px;
+    cursor: pointer; transition: opacity 0.2s;
+  }
+  .search-bar button:hover { opacity: 0.9; }
+
+  /* FILTERS */
+  .filter-row {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    max-width: 680px; margin: 14px auto 0;
+  }
+
+  .filter-chip {
+    padding: 6px 16px; border-radius: 50px;
+    font-size: 13px; font-weight: 500;
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--muted); cursor: pointer; transition: all 0.2s;
+  }
+  .filter-chip:hover, .filter-chip.active {
+    background: var(--accent2); border-color: var(--accent2);
+    color: #fff;
+  }
+
+  /* EVENTS GRID */
+  .section { padding: 0 32px 60px; }
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px; max-width: 1200px; margin-left: auto; margin-right: auto;
+  }
+  .section-title {
+    font-family: var(--font-display); font-size: 26px; font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+
+  .events-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px; max-width: 1200px; margin: 0 auto;
+  }
+
+  .event-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+  }
+  .event-card:hover {
+    border-color: var(--border2);
+    transform: translateY(-4px);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+  }
+
+  .event-card-banner {
+    height: 160px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .event-card-banner img {
+    width: 100%; height: 100%; object-fit: cover;
+    transition: transform 0.4s;
+  }
+  .event-card:hover .event-card-banner img { transform: scale(1.05); }
+
+  .event-card-banner .banner-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, transparent 50%, rgba(17,17,24,0.9));
+  }
+
+  .event-card-banner .banner-gradient {
+    position: absolute; inset: 0;
+  }
+
+  .event-badge {
+    position: absolute; top: 12px; left: 12px;
+    padding: 4px 10px; border-radius: 50px;
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .badge-free { background: rgba(34,197,94,0.2); color: #4ade80; border: 1px solid rgba(34,197,94,0.3); }
+  .badge-paid { background: rgba(245,158,11,0.2); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
+  .badge-online { background: rgba(6,182,212,0.2); color: #22d3ee; border: 1px solid rgba(6,182,212,0.3); }
+  .badge-full { background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+
+  .event-card-body { padding: 18px; }
+
+  .event-date-tag {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--accent); font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    margin-bottom: 8px;
+  }
+
+  .event-card-title {
+    font-family: var(--font-display); font-size: 18px; font-weight: 700;
+    line-height: 1.3; margin-bottom: 10px; letter-spacing: -0.3px;
+  }
+
+  .event-card-meta {
+    display: flex; flex-direction: column; gap: 5px;
+    margin-bottom: 14px;
+  }
+
+  .meta-item {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 13px; color: var(--muted);
+  }
+
+  .meta-item svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+  .event-card-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-top: 14px; border-top: 1px solid var(--border);
+  }
+
+  .attendees-stack {
+    display: flex; align-items: center;
+  }
+
+  .attendee-avatar {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 2px solid var(--surface);
+    margin-left: -8px; font-size: 11px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600; background: var(--accent2);
+    color: white;
+  }
+  .attendee-avatar:first-child { margin-left: 0; }
+
+  .attendee-count {
+    margin-left: 8px; font-size: 13px; color: var(--muted); font-weight: 500;
+  }
+
+  .join-btn {
+    padding: 7px 18px; border-radius: 50px;
+    font-size: 13px; font-weight: 600;
+    background: var(--accent); color: #0a0a0f;
+    border: none; cursor: pointer; transition: all 0.2s;
+  }
+  .join-btn:hover { opacity: 0.9; }
+  .join-btn.joined { background: var(--surface2); color: var(--muted); cursor: default; }
+  .join-btn.full { background: transparent; color: var(--muted); border: 1px solid var(--border); cursor: not-allowed; }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-overlay.open { display: flex; animation: fadeIn 0.2s ease; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 20px;
+    max-width: 560px; width: 100%;
+    max-height: 90vh; overflow-y: auto;
+    position: relative;
+    box-shadow: var(--shadow);
+  }
+
+  .modal-close {
+    position: absolute; top: 16px; right: 16px; z-index: 10;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--muted); cursor: pointer; font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .modal-close:hover { color: var(--text); background: var(--border2); }
+
+  .modal-banner {
+    height: 200px; position: relative; border-radius: 20px 20px 0 0; overflow: hidden;
+  }
+  .modal-banner .banner-gradient { position: absolute; inset: 0; }
+
+  .modal-body { padding: 28px; }
+
+  .modal-date { font-size: 13px; color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+
+  .modal-title {
+    font-family: var(--font-display); font-size: 28px; font-weight: 800;
+    letter-spacing: -1px; line-height: 1.15; margin-bottom: 16px;
+  }
+
+  .modal-meta { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+
+  .modal-meta-item {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 14px; color: var(--muted);
+  }
+  .modal-meta-item svg { width: 16px; height: 16px; color: var(--accent); flex-shrink: 0; }
+  .modal-meta-item strong { color: var(--text); }
+
+  .modal-description {
+    font-size: 15px; color: var(--muted); line-height: 1.65;
+    margin-bottom: 24px; padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .modal-section-title {
+    font-size: 14px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.07em; color: var(--muted); margin-bottom: 12px;
+  }
+
+  .form-group { margin-bottom: 16px; }
+  .form-label { display: block; font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .form-input {
+    width: 100%; padding: 12px 16px;
+    background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: var(--radius-sm); color: var(--text);
+    font-family: var(--font-body); font-size: 14px;
+    outline: none; transition: border-color 0.2s;
+  }
+  .form-input:focus { border-color: var(--accent); }
+
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+  .modal-btn {
+    flex: 1; padding: 14px; border-radius: 50px;
+    font-family: var(--font-body); font-size: 15px; font-weight: 600;
+    cursor: pointer; border: none; transition: all 0.2s;
+  }
+  .modal-btn.primary { background: var(--accent); color: #0a0a0f; }
+  .modal-btn.primary:hover { opacity: 0.9; transform: translateY(-1px); }
+  .modal-btn.secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border2); }
+
+  /* QR MODAL */
+  .qr-modal {
+    text-align: center; padding: 40px 32px;
+  }
+
+  .qr-success-icon {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: rgba(34,197,94,0.15); border: 2px solid rgba(34,197,94,0.4);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 20px; font-size: 28px;
+  }
+
+  .qr-title { font-family: var(--font-display); font-size: 26px; font-weight: 800; margin-bottom: 6px; }
+  .qr-subtitle { font-size: 14px; color: var(--muted); margin-bottom: 28px; }
+
+  #qr-code {
+    width: 200px; height: 200px;
+    margin: 0 auto 20px;
+    padding: 16px; background: white; border-radius: var(--radius);
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .qr-ticket {
+    background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: var(--radius); padding: 16px 20px;
+    margin-bottom: 20px; text-align: left;
+  }
+
+  .qr-ticket-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .qr-ticket-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .qr-ticket-value { font-size: 14px; font-weight: 600; }
+  .ticket-id { font-family: monospace; color: var(--accent); font-size: 13px; }
+
+  .qr-download {
+    display: flex; gap: 10px; justify-content: center;
+  }
+
+  /* CREATE EVENT VIEW */
+  .create-view { max-width: 720px; margin: 0 auto; padding: 40px 32px 80px; }
+
+  .create-header { margin-bottom: 40px; }
+  .create-header h2 { font-family: var(--font-display); font-size: 36px; font-weight: 800; letter-spacing: -1px; margin-bottom: 8px; }
+  .create-header p { color: var(--muted); font-size: 16px; }
+
+  .create-form { display: flex; flex-direction: column; gap: 24px; }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  .color-picker-row { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; margin-top: 8px; }
+  .color-swatch {
+    height: 36px; border-radius: 8px; cursor: pointer; border: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .color-swatch:hover { transform: scale(1.1); }
+  .color-swatch.selected { border-color: white; transform: scale(1.1); }
+
+  .submit-btn {
+    padding: 16px 32px; border-radius: 50px;
+    background: var(--accent); color: #0a0a0f;
+    font-family: var(--font-body); font-size: 16px; font-weight: 700;
+    border: none; cursor: pointer; transition: all 0.2s;
+    align-self: flex-start;
+  }
+  .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(200,255,87,0.35); }
+
+  /* DASHBOARD VIEW */
+  .dashboard-view { max-width: 1200px; margin: 0 auto; padding: 40px 32px 80px; }
+
+  .dash-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 36px; }
+  .dash-header h2 { font-family: var(--font-display); font-size: 32px; font-weight: 800; letter-spacing: -1px; }
+
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 36px; }
+
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 22px 24px;
+    transition: all 0.2s;
+  }
+  .stat-card:hover { border-color: var(--border2); }
+
+  .stat-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; font-weight: 600; }
+  .stat-value { font-family: var(--font-display); font-size: 36px; font-weight: 800; letter-spacing: -1px; margin-bottom: 4px; }
+  .stat-change { font-size: 12px; color: var(--success); font-weight: 600; }
+
+  .dash-events-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .dash-events-title { font-family: var(--font-display); font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+
+  .dash-event-row {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); margin-bottom: 12px;
+    overflow: hidden; transition: all 0.2s;
+  }
+  .dash-event-row:hover { border-color: var(--border2); }
+
+  .dash-event-top {
+    display: flex; align-items: center; gap: 16px;
+    padding: 18px 20px; cursor: pointer;
+  }
+
+  .dash-event-color { width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0; }
+
+  .dash-event-info { flex: 1; }
+  .dash-event-name { font-weight: 700; font-size: 16px; margin-bottom: 4px; }
+  .dash-event-date { font-size: 13px; color: var(--muted); }
+
+  .dash-event-stats { display: flex; gap: 20px; align-items: center; margin-right: 10px; }
+  .dash-stat-pill {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+  .dash-stat-pill span:first-child { font-size: 18px; font-weight: 800; color: var(--accent); }
+  .dash-stat-pill span:last-child { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+  .expand-btn {
+    background: none; border: none; color: var(--muted);
+    cursor: pointer; padding: 4px; transition: transform 0.2s;
+  }
+  .expand-btn.open { transform: rotate(180deg); }
+
+  .attendee-table-wrap {
+    display: none; padding: 0 20px 20px;
+  }
+  .attendee-table-wrap.open { display: block; animation: fadeIn 0.25s ease; }
+
+  .attendee-search {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: var(--radius-sm); padding: 8px 14px;
+    margin-bottom: 14px;
+  }
+  .attendee-search input {
+    background: none; border: none; outline: none;
+    color: var(--text); font-family: var(--font-body); font-size: 14px; flex: 1;
+  }
+  .attendee-search input::placeholder { color: var(--muted); }
+
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left; font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.07em; color: var(--muted); font-weight: 700;
+    padding: 10px 12px; border-bottom: 1px solid var(--border);
+  }
+  td { padding: 12px 12px; font-size: 14px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .attendee-name-cell { display: flex; align-items: center; gap: 10px; }
+  .attendee-avatar-sm {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; color: white; flex-shrink: 0;
+  }
+
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 50px; font-size: 12px; font-weight: 600;
+  }
+  .status-checked { background: rgba(34,197,94,0.15); color: #4ade80; }
+  .status-pending { background: rgba(245,158,11,0.15); color: #fbbf24; }
+
+  .check-in-btn {
+    padding: 5px 14px; border-radius: 50px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: 1px solid var(--border2);
+    background: transparent; color: var(--text);
+    transition: all 0.2s;
+  }
+  .check-in-btn:hover { background: var(--accent); color: #0a0a0f; border-color: var(--accent); }
+  .check-in-btn.done { background: rgba(34,197,94,0.15); color: #4ade80; border-color: rgba(34,197,94,0.3); cursor: default; }
+
+  .view-qr-btn {
+    padding: 5px 14px; border-radius: 50px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: 1px solid rgba(124,58,237,0.4);
+    background: rgba(124,58,237,0.1); color: #a78bfa;
+    transition: all 0.2s;
+  }
+  .view-qr-btn:hover { background: rgba(124,58,237,0.2); }
+
+  .progress-bar {
+    height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; margin-top: 6px;
+  }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.4s; }
+
+  /* NOTIFICATION TOAST */
+  .toast {
+    position: fixed; bottom: 30px; right: 30px; z-index: 999;
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 20px; border-radius: var(--radius);
+    background: var(--surface); border: 1px solid var(--border2);
+    box-shadow: var(--shadow);
+    font-size: 14px; font-weight: 500;
+    transform: translateY(100px); opacity: 0;
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast-icon { font-size: 20px; }
+
+  /* MY EVENTS VIEW */
+  .my-events-view { max-width: 900px; margin: 0 auto; padding: 40px 32px 80px; }
+
+  .my-ticket {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 20px; overflow: hidden;
+    margin-bottom: 20px;
+    position: relative;
+    transition: all 0.2s;
+  }
+  .my-ticket:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
+
+  .ticket-color-bar { height: 6px; }
+
+  .ticket-body {
+    display: flex; gap: 24px; padding: 24px;
+    align-items: flex-start;
+  }
+
+  .ticket-qr-thumb {
+    width: 80px; height: 80px; flex-shrink: 0;
+    background: white; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: transform 0.2s;
+  }
+  .ticket-qr-thumb:hover { transform: scale(1.05); }
+
+  .ticket-info { flex: 1; }
+  .ticket-event-name { font-family: var(--font-display); font-size: 22px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+  .ticket-meta { font-size: 13px; color: var(--muted); margin-bottom: 12px; line-height: 1.6; }
+  .ticket-id-line { font-family: monospace; font-size: 12px; color: var(--accent2); background: rgba(124,58,237,0.1); padding: 3px 10px; border-radius: 50px; display: inline-block; }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center; padding: 80px 20px;
+    color: var(--muted);
+  }
+  .empty-state .empty-icon { font-size: 56px; margin-bottom: 20px; }
+  .empty-state h3 { font-family: var(--font-display); font-size: 24px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+  .empty-state p { font-size: 15px; margin-bottom: 24px; }
+
+  /* COLOR GRADIENTS */
+  .grad-violet { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+  .grad-emerald { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+  .grad-sunset { background: linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%); }
+  .grad-ocean { background: linear-gradient(135deg, #2196f3 0%, #67d3f5 100%); }
+  .grad-rose { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+  .grad-gold { background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); }
+  .grad-midnight { background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%); }
+  .grad-lime { background: linear-gradient(135deg, #a8e063 0%, #56ab2f 100%); }
+
+  @media (max-width: 768px) {
+    nav { padding: 12px 20px; }
+    .hero { padding: 60px 20px 40px; }
+    .section, .search-section { padding-left: 20px; padding-right: 20px; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .form-row { grid-template-columns: 1fr; }
+    .dash-event-stats { display: none; }
+    .ticket-body { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo" onclick="showView('discover')">Event<span>Flow</span></div>
+  <div class="nav-links">
+    <button class="nav-btn ghost" onclick="showView('discover')">Discover</button>
+    <button class="nav-btn ghost" onclick="showView('create')">Create Event</button>
+    <button class="nav-btn ghost" onclick="showView('my-events')">My Tickets</button>
+    <button class="nav-btn ghost" onclick="showView('dashboard')">Dashboard</button>
+    <button class="nav-btn primary" onclick="openModal('login-modal')">Sign In</button>
+  </div>
+</nav>
+
+<!-- DISCOVER VIEW -->
+<div id="view-discover" class="view active">
+  <div class="hero">
+    <div class="hero-tag">✦ 2,400+ Events This Week</div>
+    <h1>Find your next<br><em>unforgettable</em> moment</h1>
+    <p>Discover events, connect with communities, and join experiences that matter to you.</p>
+    <div class="hero-actions">
+      <button class="btn btn-primary" onclick="showView('create')">✦ Create an Event</button>
+      <button class="btn btn-outline" onclick="document.querySelector('.search-bar input').focus()">Explore Events →</button>
+    </div>
+  </div>
+
+  <div class="search-section">
+    <div class="search-bar">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color: var(--muted); flex-shrink:0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input id="search-input" type="text" placeholder="Search events, communities, or topics..." oninput="filterEvents()">
+      <button onclick="filterEvents()">Search</button>
+    </div>
+    <div class="filter-row" id="filter-row">
+      <div class="filter-chip active" onclick="setFilter('all', this)">All</div>
+      <div class="filter-chip" onclick="setFilter('music', this)">🎵 Music</div>
+      <div class="filter-chip" onclick="setFilter('tech', this)">💻 Tech</div>
+      <div class="filter-chip" onclick="setFilter('food', this)">🍽️ Food</div>
+      <div class="filter-chip" onclick="setFilter('art', this)">🎨 Art</div>
+      <div class="filter-chip" onclick="setFilter('fitness', this)">💪 Fitness</div>
+      <div class="filter-chip" onclick="setFilter('business', this)">💼 Business</div>
+      <div class="filter-chip" onclick="setFilter('online', this)">🌐 Online</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header" style="margin-bottom: 24px;">
+      <h2 class="section-title">Upcoming Events</h2>
+      <span style="font-size:14px; color:var(--muted)" id="event-count"></span>
+    </div>
+    <div class="events-grid" id="events-grid"></div>
+  </div>
+</div>
+
+<!-- CREATE EVENT VIEW -->
+<div id="view-create" class="view">
+  <div class="create-view">
+    <div class="create-header">
+      <h2>Create an Event</h2>
+      <p>Fill in the details and publish your event for the world to discover.</p>
+    </div>
+    <div class="create-form">
+      <div class="form-group">
+        <label class="form-label">Event Title *</label>
+        <input class="form-input" id="c-title" type="text" placeholder="e.g. Design Systems Summit 2025">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-input" id="c-desc" rows="4" placeholder="Tell attendees what to expect..."></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Date *</label>
+          <input class="form-input" id="c-date" type="date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Time *</label>
+          <input class="form-input" id="c-time" type="time">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Location</label>
+          <input class="form-input" id="c-location" type="text" placeholder="e.g. San Francisco, CA or Online">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <select class="form-input" id="c-category">
+            <option value="tech">Tech</option>
+            <option value="music">Music</option>
+            <option value="food">Food</option>
+            <option value="art">Art</option>
+            <option value="fitness">Fitness</option>
+            <option value="business">Business</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Capacity</label>
+          <input class="form-input" id="c-capacity" type="number" placeholder="e.g. 100" min="1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ticket Price (leave 0 for free)</label>
+          <input class="form-input" id="c-price" type="number" placeholder="0.00" min="0" step="0.01">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Event Color Theme</label>
+        <div class="color-picker-row" id="color-picker">
+          <div class="color-swatch grad-violet selected" data-grad="grad-violet" onclick="selectColor(this)"></div>
+          <div class="color-swatch grad-emerald" data-grad="grad-emerald" onclick="selectColor(this)"></div>
+          <div class="color-swatch grad-sunset" data-grad="grad-sunset" onclick="selectColor(this)"></div>
+          <div class="color-swatch grad-ocean" data-grad="grad-ocean" onclick="selectColor(this)"></div>
+          <div class="color-swatch grad-rose" data-grad="grad-rose" onclick="selectColor(this)"></div>
+          <div class="color-swatch grad-gold" data-grad="grad-gold" onclick="selectColor(this)"></div>
+          <div class="color-swatch grad-midnight" data-grad="grad-midnight" onclick="selectColor(this)"></div>
+          <div class="color-swatch grad-lime" data-grad="grad-lime" onclick="selectColor(this)"></div>
+        </div>
+      </div>
+      <div class="form-group" style="display:flex;align-items:center;gap:12px">
+        <input type="checkbox" id="c-online" style="width:18px;height:18px;accent-color:var(--accent)">
+        <label for="c-online" style="font-size:14px;cursor:pointer;">This is an online event</label>
+      </div>
+      <button class="submit-btn" onclick="createEvent()">Publish Event →</button>
+    </div>
+  </div>
+</div>
+
+<!-- MY TICKETS VIEW -->
+<div id="view-my-events" class="view">
+  <div class="my-events-view">
+    <div class="dash-header">
+      <h2 style="font-family:var(--font-display);font-size:32px;font-weight:800;letter-spacing:-1px;">My Tickets</h2>
+    </div>
+    <div id="my-tickets-list"></div>
+  </div>
+</div>
+
+<!-- DASHBOARD VIEW -->
+<div id="view-dashboard" class="view">
+  <div class="dashboard-view">
+    <div class="dash-header">
+      <h2>Host Dashboard</h2>
+      <button class="btn btn-primary" onclick="showView('create')" style="padding:10px 22px;font-size:14px;">+ Create Event</button>
+    </div>
+
+    <div class="stats-grid" id="dash-stats">
+      <div class="stat-card">
+        <div class="stat-label">Total Events</div>
+        <div class="stat-value" id="stat-events">0</div>
+        <div class="stat-change">↑ All time</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Registrations</div>
+        <div class="stat-value" id="stat-regs">0</div>
+        <div class="stat-change">↑ Active</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Checked In</div>
+        <div class="stat-value" id="stat-checked">0</div>
+        <div class="stat-change">↑ Attended</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg. Fill Rate</div>
+        <div class="stat-value" id="stat-fill">0%</div>
+        <div class="stat-change">↑ Capacity</div>
+      </div>
+    </div>
+
+    <div class="dash-events-header">
+      <div class="dash-events-title">Your Events</div>
+    </div>
+    <div id="dash-events-list">
+      <div class="empty-state">
+        <div class="empty-icon">🎪</div>
+        <h3>No events yet</h3>
+        <p>Create your first event to start managing attendees and tracking check-ins.</p>
+        <button class="btn btn-primary" onclick="showView('create')">Create Event</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EVENT DETAIL MODAL -->
+<div class="modal-overlay" id="event-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('event-modal')">✕</button>
+    <div class="modal-banner" id="modal-banner">
+      <div class="banner-gradient" id="modal-banner-grad"></div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-date" id="modal-date"></div>
+      <div class="modal-title" id="modal-title"></div>
+      <div class="modal-meta">
+        <div class="modal-meta-item">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <span id="modal-location"></span>
+        </div>
+        <div class="modal-meta-item">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"/></svg>
+          <span id="modal-attendees"></span>
+        </div>
+        <div class="modal-meta-item">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span id="modal-price"></span>
+        </div>
+        <div class="modal-meta-item">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span id="modal-capacity"></span>
+        </div>
+      </div>
+      <div class="progress-bar" id="modal-progress-bar">
+        <div class="progress-fill" id="modal-progress-fill"></div>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin:6px 0 18px;" id="modal-progress-label"></p>
+      <div class="modal-description" id="modal-description"></div>
+
+      <div class="modal-section-title">Register for this Event</div>
+      <div class="form-group"><label class="form-label">Full Name</label><input class="form-input" id="reg-name" type="text" placeholder="Your full name"></div>
+      <div class="form-group"><label class="form-label">Email Address</label><input class="form-input" id="reg-email" type="email" placeholder="your@email.com"></div>
+
+      <div class="modal-actions">
+        <button class="modal-btn secondary" onclick="closeModal('event-modal')">Cancel</button>
+        <button class="modal-btn primary" id="register-btn" onclick="registerForEvent()">Register & Get QR Code ✦</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- QR CODE MODAL -->
+<div class="modal-overlay" id="qr-modal">
+  <div class="modal" style="max-width:420px;">
+    <button class="modal-close" onclick="closeModal('qr-modal')">✕</button>
+    <div class="qr-modal">
+      <div class="qr-success-icon">✓</div>
+      <div class="qr-title">You're registered!</div>
+      <div class="qr-subtitle">Here's your unique QR code ticket</div>
+
+      <div id="qr-code"></div>
+
+      <div class="qr-ticket" id="qr-ticket-info"></div>
+
+      <div class="qr-download">
+        <button class="btn btn-outline" style="padding:10px 20px;font-size:13px;" onclick="downloadQR()">⬇ Download QR</button>
+        <button class="btn btn-primary" style="padding:10px 20px;font-size:13px;" onclick="closeModal('qr-modal');showView('my-events')">View My Tickets →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW QR MODAL (for dashboard) -->
+<div class="modal-overlay" id="view-qr-modal">
+  <div class="modal" style="max-width:400px;">
+    <button class="modal-close" onclick="closeModal('view-qr-modal')">✕</button>
+    <div class="qr-modal">
+      <div class="qr-title" id="vqr-name"></div>
+      <div class="qr-subtitle" id="vqr-event"></div>
+      <div id="view-qr-code"></div>
+      <div class="qr-ticket" id="vqr-info"></div>
+    </div>
+  </div>
+</div>
+
+<!-- LOGIN MODAL -->
+<div class="modal-overlay" id="login-modal">
+  <div class="modal" style="max-width:420px;">
+    <button class="modal-close" onclick="closeModal('login-modal')">✕</button>
+    <div style="padding:36px;">
+      <h2 style="font-family:var(--font-display);font-size:28px;font-weight:800;margin-bottom:6px;">Welcome back</h2>
+      <p style="color:var(--muted);font-size:14px;margin-bottom:28px;">Sign in to manage events and access your tickets.</p>
+      <div class="form-group"><label class="form-label">Email</label><input class="form-input" type="email" placeholder="you@example.com"></div>
+      <div class="form-group"><label class="form-label">Password</label><input class="form-input" type="password" placeholder="••••••••"></div>
+      <button class="modal-btn primary" style="width:100%;margin-top:8px;" onclick="closeModal('login-modal');showToast('✓','Signed in successfully!')">Sign In</button>
+      <p style="text-align:center;margin-top:16px;font-size:13px;color:var(--muted);">Don't have an account? <a href="#" style="color:var(--accent);">Sign up free</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <span class="toast-icon" id="toast-icon"></span>
+  <span id="toast-msg"></span>
+</div>
+
+<script>
+// ===== STATE =====
+let events = [];
+let myRegistrations = [];
+let currentEventId = null;
+let activeFilter = 'all';
+let selectedColor = 'grad-violet';
+
+// ===== SEED DATA =====
+const seedEvents = [
+  {
+    id: 'e1', title: 'AI & The Future of Design', description: 'Explore how artificial intelligence is reshaping the design landscape. Join us for talks, workshops, and networking with industry leaders shaping the future of human-computer interaction.',
+    date: '2025-04-15', time: '18:00', location: 'San Francisco, CA', category: 'tech',
+    capacity: 200, price: 0, grad: 'grad-violet', online: false,
+    attendees: [
+      { id: 'a1', name: 'Jordan Lee', email: 'jordan@example.com', ticketId: 'TKT-001', checkedIn: true, joinedAt: '2025-03-10' },
+      { id: 'a2', name: 'Sam Rivera', email: 'sam@example.com', ticketId: 'TKT-002', checkedIn: false, joinedAt: '2025-03-11' },
+      { id: 'a3', name: 'Alex Kim', email: 'alex@example.com', ticketId: 'TKT-003', checkedIn: true, joinedAt: '2025-03-12' },
+      { id: 'a4', name: 'Morgan Chen', email: 'morgan@example.com', ticketId: 'TKT-004', checkedIn: false, joinedAt: '2025-03-13' },
+    ]
+  },
+  {
+    id: 'e2', title: 'Brooklyn Jazz Night', description: 'An intimate evening of live jazz in the heart of Brooklyn. Experience world-class musicians perform original compositions and beloved classics in a stunning venue.',
+    date: '2025-04-20', time: '20:00', location: 'Brooklyn, NY', category: 'music',
+    capacity: 80, price: 35, grad: 'grad-midnight', online: false,
+    attendees: [
+      { id: 'b1', name: 'Taylor Moss', email: 'taylor@example.com', ticketId: 'TKT-010', checkedIn: true, joinedAt: '2025-03-08' },
+      { id: 'b2', name: 'Casey Wong', email: 'casey@example.com', ticketId: 'TKT-011', checkedIn: false, joinedAt: '2025-03-09' },
+    ]
+  },
+  {
+    id: 'e3', title: 'Startup Founder Bootcamp', description: 'Three days of intensive workshops covering fundraising, product-market fit, team building, and go-to-market strategy. Learn from founders who have built companies from zero to millions.',
+    date: '2025-05-01', time: '09:00', location: 'Austin, TX', category: 'business',
+    capacity: 50, price: 299, grad: 'grad-sunset', online: false,
+    attendees: [
+      { id: 'c1', name: 'Drew Park', email: 'drew@example.com', ticketId: 'TKT-020', checkedIn: false, joinedAt: '2025-03-14' },
+    ]
+  },
+  {
+    id: 'e4', title: 'React Summit — Online 2025', description: 'The world\'s largest online React conference. Two days of talks, workshops, and live Q&As with the core React team and top contributors from around the globe.',
+    date: '2025-04-28', time: '14:00', location: 'Online', category: 'tech',
+    capacity: 5000, price: 0, grad: 'grad-ocean', online: true,
+    attendees: [
+      { id: 'd1', name: 'River Stone', email: 'river@example.com', ticketId: 'TKT-030', checkedIn: false, joinedAt: '2025-03-05' },
+      { id: 'd2', name: 'Quinn Adler', email: 'quinn@example.com', ticketId: 'TKT-031', checkedIn: false, joinedAt: '2025-03-06' },
+      { id: 'd3', name: 'Sage Mills', email: 'sage@example.com', ticketId: 'TKT-032', checkedIn: false, joinedAt: '2025-03-07' },
+    ]
+  },
+  {
+    id: 'e5', title: 'Wellness & Yoga Retreat', description: 'A weekend of mindful movement, breathwork, meditation, and plant-based cuisine. Reconnect with yourself in a stunning mountain setting with expert guides.',
+    date: '2025-05-10', time: '08:00', location: 'Boulder, CO', category: 'fitness',
+    capacity: 30, price: 149, grad: 'grad-emerald', online: false,
+    attendees: []
+  },
+  {
+    id: 'e6', title: 'Street Food Festival', description: 'Over 60 vendors from around the world serving authentic street food. Live cooking demonstrations, tasting competitions, and artisan market. Family-friendly fun for all ages.',
+    date: '2025-05-18', time: '11:00', location: 'Chicago, IL', category: 'food',
+    capacity: 1000, price: 0, grad: 'grad-gold', online: false,
+    attendees: []
+  },
+];
+
+events = JSON.parse(JSON.stringify(seedEvents));
+
+// ===== HELPERS =====
+function formatDate(dateStr, timeStr) {
+  const d = new Date(dateStr + 'T' + (timeStr || '00:00'));
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric' }) + ' · ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+
+function getInitials(name) {
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2);
+}
+
+function gradColors() {
+  return {
+    'grad-violet': '#667eea', 'grad-emerald': '#11998e', 'grad-sunset': '#fc4a1a',
+    'grad-ocean': '#2196f3', 'grad-rose': '#f093fb', 'grad-gold': '#f6d365',
+    'grad-midnight': '#302b63', 'grad-lime': '#a8e063'
+  };
+}
+
+function getEventColor(grad) { return gradColors()[grad] || '#667eea'; }
+
+function generateTicketId() {
+  return 'TKT-' + Math.random().toString(36).substr(2,6).toUpperCase();
+}
+
+// ===== VIEW SWITCHING =====
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  if (name === 'discover') renderEvents();
+  if (name === 'dashboard') renderDashboard();
+  if (name === 'my-events') renderMyTickets();
+  window.scrollTo(0,0);
+}
+
+// ===== MODALS =====
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ===== TOAST =====
+function showToast(icon, msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-icon').textContent = icon;
+  document.getElementById('toast-msg').textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ===== FILTERS =====
+let filterValue = '';
+function setFilter(cat, el) {
+  activeFilter = cat;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderEvents();
+}
+function filterEvents() {
+  filterValue = document.getElementById('search-input').value.toLowerCase();
+  renderEvents();
+}
+
+// ===== RENDER EVENTS =====
+function renderEvents() {
+  const grid = document.getElementById('events-grid');
+  let filtered = events.filter(e => {
+    const matchFilter = activeFilter === 'all' || e.category === activeFilter || (activeFilter === 'online' && e.online);
+    const matchSearch = !filterValue || e.title.toLowerCase().includes(filterValue) || e.location.toLowerCase().includes(filterValue) || e.category.includes(filterValue);
+    return matchFilter && matchSearch;
+  });
+
+  document.getElementById('event-count').textContent = `${filtered.length} event${filtered.length !== 1 ? 's' : ''} found`;
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🔍</div><h3>No events found</h3><p>Try a different search or category.</p></div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(e => {
+    const joined = myRegistrations.find(r => r.eventId === e.id);
+    const fillPct = Math.round((e.attendees.length / e.capacity) * 100);
+    const isFull = e.attendees.length >= e.capacity;
+    const avatarColors = ['#7c3aed','#2196f3','#11998e','#fc4a1a','#f093fb'];
+
+    return `
+    <div class="event-card" onclick="openEventDetail('${e.id}')">
+      <div class="event-card-banner">
+        <div class="banner-gradient ${e.grad}"></div>
+        <div class="banner-overlay"></div>
+        ${isFull ? '<span class="event-badge badge-full">Full</span>' :
+          e.price === 0 ? '<span class="event-badge badge-free">Free</span>' :
+          e.online ? '<span class="event-badge badge-online">Online</span>' :
+          `<span class="event-badge badge-paid">$${e.price}</span>`}
+      </div>
+      <div class="event-card-body">
+        <div class="event-date-tag">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          ${formatDate(e.date, e.time)}
+        </div>
+        <div class="event-card-title">${e.title}</div>
+        <div class="event-card-meta">
+          <div class="meta-item">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            ${e.location}
+          </div>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${fillPct}%"></div></div>
+        <p style="font-size:11px;color:var(--muted);margin:5px 0 12px;">${e.attendees.length}/${e.capacity} registered (${fillPct}%)</p>
+        <div class="event-card-footer">
+          <div class="attendees-stack">
+            ${e.attendees.slice(0,3).map((a,i) => `<div class="attendee-avatar" style="background:${avatarColors[i%avatarColors.length]}">${getInitials(a.name)}</div>`).join('')}
+            ${e.attendees.length > 3 ? `<div class="attendee-count">+${e.attendees.length - 3} going</div>` : e.attendees.length > 0 ? `<div class="attendee-count">${e.attendees.length} going</div>` : '<div class="attendee-count">Be the first!</div>'}
+          </div>
+          ${joined ? '<button class="join-btn joined" onclick="event.stopPropagation()">✓ Registered</button>' :
+            isFull ? '<button class="join-btn full" onclick="event.stopPropagation()">Full</button>' :
+            `<button class="join-btn" onclick="event.stopPropagation();openEventDetail('${e.id}')">Register →</button>`}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ===== EVENT DETAIL MODAL =====
+function openEventDetail(id) {
+  const e = events.find(ev => ev.id === id);
+  if (!e) return;
+  currentEventId = id;
+
+  document.getElementById('modal-banner-grad').className = 'banner-gradient ' + e.grad;
+  document.getElementById('modal-date').textContent = formatDate(e.date, e.time);
+  document.getElementById('modal-title').textContent = e.title;
+  document.getElementById('modal-location').innerHTML = `<strong>${e.location}</strong>${e.online ? ' (Online Event)' : ''}`;
+  document.getElementById('modal-attendees').innerHTML = `<strong>${e.attendees.length} registered</strong>`;
+  document.getElementById('modal-price').innerHTML = `<strong>${e.price === 0 ? 'Free' : '$' + e.price}</strong>`;
+  document.getElementById('modal-capacity').innerHTML = `<strong>${e.capacity - e.attendees.length} spots left</strong> of ${e.capacity} total`;
+  document.getElementById('modal-description').textContent = e.description;
+
+  const pct = Math.round((e.attendees.length / e.capacity) * 100);
+  document.getElementById('modal-progress-fill').style.width = pct + '%';
+  document.getElementById('modal-progress-label').textContent = `${pct}% full`;
+
+  const joined = myRegistrations.find(r => r.eventId === id);
+  const regBtn = document.getElementById('register-btn');
+  if (joined) {
+    regBtn.textContent = '✓ Already Registered';
+    regBtn.disabled = true;
+    regBtn.style.opacity = '0.6';
+  } else if (e.attendees.length >= e.capacity) {
+    regBtn.textContent = 'Event is Full';
+    regBtn.disabled = true;
+    regBtn.style.opacity = '0.6';
+  } else {
+    regBtn.textContent = 'Register & Get QR Code ✦';
+    regBtn.disabled = false;
+    regBtn.style.opacity = '1';
+  }
+
+  document.getElementById('reg-name').value = '';
+  document.getElementById('reg-email').value = '';
+  openModal('event-modal');
+}
+
+// ===== REGISTER =====
+function registerForEvent() {
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+
+  if (!name || !email) { showToast('⚠️', 'Please fill in your name and email.'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast('⚠️', 'Please enter a valid email.'); return; }
+
+  const e = events.find(ev => ev.id === currentEventId);
+  if (!e) return;
+
+  const ticketId = generateTicketId();
+  const attendee = {
+    id: 'u-' + Date.now(),
+    name, email, ticketId,
+    checkedIn: false,
+    joinedAt: new Date().toISOString().slice(0,10)
+  };
+
+  e.attendees.push(attendee);
+  myRegistrations.push({ eventId: currentEventId, attendeeId: attendee.id, ticketId, name, email });
+
+  closeModal('event-modal');
+  showQRCode(attendee, e);
+}
+
+// ===== QR CODE GENERATION =====
+function showQRCode(attendee, event) {
+  const qrContainer = document.getElementById('qr-code');
+  qrContainer.innerHTML = '';
+
+  const qrData = JSON.stringify({
+    ticketId: attendee.ticketId,
+    name: attendee.name,
+    event: event.title,
+    eventId: event.id,
+    date: event.date,
+    issued: new Date().toISOString()
+  });
+
+  new QRCode(qrContainer, {
+    text: qrData,
+    width: 168,
+    height: 168,
+    colorDark: '#000000',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.H
+  });
+
+  document.getElementById('qr-ticket-info').innerHTML = `
+    <div class="qr-ticket-row"><span class="qr-ticket-label">Event</span><span class="qr-ticket-value">${event.title}</span></div>
+    <div class="qr-ticket-row"><span class="qr-ticket-label">Name</span><span class="qr-ticket-value">${attendee.name}</span></div>
+    <div class="qr-ticket-row"><span class="qr-ticket-label">Date</span><span class="qr-ticket-value">${formatDate(event.date, event.time)}</span></div>
+    <div class="qr-ticket-row"><span class="qr-ticket-label">Ticket ID</span><span class="ticket-id">${attendee.ticketId}</span></div>
+  `;
+
+  openModal('qr-modal');
+  showToast('🎉', 'Successfully registered! Your QR ticket is ready.');
+  renderEvents();
+}
+
+function downloadQR() {
+  const canvas = document.querySelector('#qr-code canvas');
+  if (!canvas) return;
+  const link = document.createElement('a');
+  link.download = 'eventflow-ticket.png';
+  link.href = canvas.toDataURL();
+  link.click();
+  showToast('⬇️', 'QR code downloaded!');
+}
+
+// ===== MY TICKETS =====
+function renderMyTickets() {
+  const container = document.getElementById('my-tickets-list');
+  if (myRegistrations.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🎟️</div>
+        <h3>No tickets yet</h3>
+        <p>Register for an event to see your QR code tickets here.</p>
+        <button class="btn btn-primary" onclick="showView('discover')">Discover Events</button>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = myRegistrations.map(reg => {
+    const e = events.find(ev => ev.id === reg.eventId);
+    if (!e) return '';
+    const attendee = e.attendees.find(a => a.id === reg.attendeeId);
+    return `
+    <div class="my-ticket">
+      <div class="ticket-color-bar ${e.grad}"></div>
+      <div class="ticket-body">
+        <div class="ticket-qr-thumb" onclick="showAttendeeQR('${reg.eventId}','${reg.attendeeId}')" id="mini-qr-${reg.attendeeId}">
+          <div id="mini-qr-render-${reg.attendeeId}"></div>
+        </div>
+        <div class="ticket-info">
+          <div class="ticket-event-name">${e.title}</div>
+          <div class="ticket-meta">
+            📅 ${formatDate(e.date, e.time)}<br>
+            📍 ${e.location}<br>
+            👤 ${reg.name}
+          </div>
+          <span class="ticket-id-line">${reg.ticketId}</span>
+          ${attendee && attendee.checkedIn ? '<span style="margin-left:8px;padding:3px 10px;background:rgba(34,197,94,0.15);color:#4ade80;border-radius:50px;font-size:12px;font-weight:600;">✓ Checked In</span>' : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Render mini QR codes
+  myRegistrations.forEach(reg => {
+    const e = events.find(ev => ev.id === reg.eventId);
+    if (!e) return;
+    const el = document.getElementById('mini-qr-render-' + reg.attendeeId);
+    if (el && el.childElementCount === 0) {
+      new QRCode(el, {
+        text: reg.ticketId,
+        width: 64, height: 64,
+        colorDark: '#000', colorLight: '#fff',
+        correctLevel: QRCode.CorrectLevel.L
+      });
+    }
+  });
+}
+
+function showAttendeeQR(eventId, attendeeId) {
+  const e = events.find(ev => ev.id === eventId);
+  const reg = myRegistrations.find(r => r.eventId === eventId && r.attendeeId === attendeeId);
+  if (!e || !reg) return;
+
+  document.getElementById('vqr-name').textContent = reg.name;
+  document.getElementById('vqr-event').textContent = e.title + ' · ' + formatDate(e.date, e.time);
+  document.getElementById('vqr-info').innerHTML = `
+    <div class="qr-ticket-row"><span class="qr-ticket-label">Ticket ID</span><span class="ticket-id">${reg.ticketId}</span></div>
+    <div class="qr-ticket-row"><span class="qr-ticket-label">Location</span><span class="qr-ticket-value">${e.location}</span></div>
+  `;
+
+  const qrEl = document.getElementById('view-qr-code');
+  qrEl.innerHTML = '';
+  new QRCode(qrEl, {
+    text: JSON.stringify({ ticketId: reg.ticketId, name: reg.name, event: e.title }),
+    width: 180, height: 180,
+    colorDark: '#000', colorLight: '#fff',
+    correctLevel: QRCode.CorrectLevel.H
+  });
+
+  openModal('view-qr-modal');
+}
+
+// ===== DASHBOARD =====
+function renderDashboard() {
+  const allAttendees = events.reduce((acc, e) => acc + e.attendees.length, 0);
+  const allChecked = events.reduce((acc, e) => acc + e.attendees.filter(a => a.checkedIn).length, 0);
+  const avgFill = events.length ? Math.round(events.reduce((acc, e) => acc + (e.attendees.length / e.capacity * 100), 0) / events.length) : 0;
+
+  document.getElementById('stat-events').textContent = events.length;
+  document.getElementById('stat-regs').textContent = allAttendees;
+  document.getElementById('stat-checked').textContent = allChecked;
+  document.getElementById('stat-fill').textContent = avgFill + '%';
+
+  const list = document.getElementById('dash-events-list');
+  if (events.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">🎪</div><h3>No events yet</h3><p>Create your first event to start managing attendees.</p><button class="btn btn-primary" onclick="showView('create')">Create Event</button></div>`;
+    return;
+  }
+
+  list.innerHTML = events.map(e => {
+    const checked = e.attendees.filter(a => a.checkedIn).length;
+    const pct = Math.round((e.attendees.length / e.capacity) * 100);
+    return `
+    <div class="dash-event-row">
+      <div class="dash-event-top" onclick="toggleAttendees('${e.id}')">
+        <div class="dash-event-color ${e.grad}"></div>
+        <div class="dash-event-info">
+          <div class="dash-event-name">${e.title}</div>
+          <div class="dash-event-date">${formatDate(e.date, e.time)} · ${e.location}</div>
+          <div class="progress-bar" style="margin-top:8px;max-width:200px;">
+            <div class="progress-fill" style="width:${pct}%"></div>
+          </div>
+        </div>
+        <div class="dash-event-stats">
+          <div class="dash-stat-pill">
+            <span>${e.attendees.length}</span>
+            <span>Registered</span>
+          </div>
+          <div class="dash-stat-pill">
+            <span>${checked}</span>
+            <span>Checked In</span>
+          </div>
+          <div class="dash-stat-pill">
+            <span>${pct}%</span>
+            <span>Fill Rate</span>
+          </div>
+        </div>
+        <button class="expand-btn" id="expand-${e.id}">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+      </div>
+      <div class="attendee-table-wrap" id="attendees-${e.id}">
+        <div class="attendee-search">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" placeholder="Search attendees..." oninput="filterAttendees('${e.id}', this.value)" id="attendee-search-${e.id}">
+        </div>
+        ${e.attendees.length === 0
+          ? '<p style="text-align:center;color:var(--muted);font-size:14px;padding:20px 0;">No attendees yet.</p>'
+          : `<table id="attendee-table-${e.id}">
+              <thead><tr>
+                <th>Attendee</th>
+                <th>Ticket ID</th>
+                <th>Joined</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr></thead>
+              <tbody>${renderAttendeeRows(e)}</tbody>
+            </table>`
+        }
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderAttendeeRows(e, filter='') {
+  const colors = ['#7c3aed','#2196f3','#11998e','#fc4a1a','#f093fb','#f59e0b'];
+  return e.attendees
+    .filter(a => !filter || a.name.toLowerCase().includes(filter) || a.email.toLowerCase().includes(filter))
+    .map((a, i) => `
+    <tr id="row-${a.id}">
+      <td>
+        <div class="attendee-name-cell">
+          <div class="attendee-avatar-sm" style="background:${colors[i%colors.length]}">${getInitials(a.name)}</div>
+          <div>
+            <div style="font-weight:600">${a.name}</div>
+            <div style="font-size:12px;color:var(--muted)">${a.email}</div>
+          </div>
+        </div>
+      </td>
+      <td><span class="ticket-id">${a.ticketId}</span></td>
+      <td style="color:var(--muted)">${a.joinedAt}</td>
+      <td>
+        <span class="status-badge ${a.checkedIn ? 'status-checked' : 'status-pending'}">
+          ${a.checkedIn ? '✓ Checked In' : '⏳ Pending'}
+        </span>
+      </td>
+      <td style="display:flex;gap:8px;align-items:center;">
+        <button class="check-in-btn ${a.checkedIn ? 'done' : ''}" id="checkin-${a.id}" onclick="toggleCheckIn('${e.id}','${a.id}')">${a.checkedIn ? '✓ Done' : 'Check In'}</button>
+        <button class="view-qr-btn" onclick="showDashQR('${e.id}','${a.id}')">QR</button>
+      </td>
+    </tr>`).join('');
+}
+
+function filterAttendees(eventId, value) {
+  const e = events.find(ev => ev.id === eventId);
+  if (!e) return;
+  const tbody = document.querySelector(`#attendee-table-${eventId} tbody`);
+  if (tbody) tbody.innerHTML = renderAttendeeRows(e, value.toLowerCase());
+}
+
+function toggleAttendees(id) {
+  const panel = document.getElementById('attendees-' + id);
+  const btn = document.getElementById('expand-' + id);
+  panel.classList.toggle('open');
+  btn.classList.toggle('open');
+}
+
+function toggleCheckIn(eventId, attendeeId) {
+  const e = events.find(ev => ev.id === eventId);
+  const a = e && e.attendees.find(at => at.id === attendeeId);
+  if (!a) return;
+  a.checkedIn = !a.checkedIn;
+
+  const btn = document.getElementById('checkin-' + attendeeId);
+  const row = document.getElementById('row-' + attendeeId);
+  if (btn) {
+    btn.textContent = a.checkedIn ? '✓ Done' : 'Check In';
+    btn.className = 'check-in-btn ' + (a.checkedIn ? 'done' : '');
+  }
+  // Update status badge
+  const statusBadge = row && row.querySelector('.status-badge');
+  if (statusBadge) {
+    statusBadge.className = 'status-badge ' + (a.checkedIn ? 'status-checked' : 'status-pending');
+    statusBadge.textContent = a.checkedIn ? '✓ Checked In' : '⏳ Pending';
+  }
+
+  const checked = e.attendees.filter(at => at.checkedIn).length;
+  document.getElementById('stat-checked').textContent = events.reduce((acc, ev) => acc + ev.attendees.filter(at => at.checkedIn).length, 0);
+  showToast(a.checkedIn ? '✓' : '↩', a.name + (a.checkedIn ? ' checked in!' : ' check-in removed.'));
+
+  // Also update my-tickets if open
+  const myReg = myRegistrations.find(r => r.eventId === eventId && r.attendeeId === attendeeId);
+  if (myReg) renderMyTickets();
+}
+
+function showDashQR(eventId, attendeeId) {
+  const e = events.find(ev => ev.id === eventId);
+  const a = e && e.attendees.find(at => at.id === attendeeId);
+  if (!e || !a) return;
+
+  document.getElementById('vqr-name').textContent = a.name;
+  document.getElementById('vqr-event').textContent = e.title;
+  document.getElementById('vqr-info').innerHTML = `
+    <div class="qr-ticket-row"><span class="qr-ticket-label">Email</span><span class="qr-ticket-value">${a.email}</span></div>
+    <div class="qr-ticket-row"><span class="qr-ticket-label">Ticket ID</span><span class="ticket-id">${a.ticketId}</span></div>
+    <div class="qr-ticket-row"><span class="qr-ticket-label">Status</span><span style="color:${a.checkedIn?'#4ade80':'#fbbf24'};font-weight:600">${a.checkedIn?'✓ Checked In':'⏳ Pending'}</span></div>
+  `;
+  const qrEl = document.getElementById('view-qr-code');
+  qrEl.innerHTML = '';
+  new QRCode(qrEl, {
+    text: JSON.stringify({ ticketId: a.ticketId, name: a.name, event: e.title, eventId }),
+    width: 180, height: 180,
+    colorDark: '#000', colorLight: '#fff',
+    correctLevel: QRCode.CorrectLevel.H
+  });
+  openModal('view-qr-modal');
+}
+
+// ===== CREATE EVENT =====
+function selectColor(el) {
+  document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedColor = el.dataset.grad;
+}
+
+function createEvent() {
+  const title = document.getElementById('c-title').value.trim();
+  const desc = document.getElementById('c-desc').value.trim();
+  const date = document.getElementById('c-date').value;
+  const time = document.getElementById('c-time').value;
+  const location = document.getElementById('c-location').value.trim() || 'TBD';
+  const category = document.getElementById('c-category').value;
+  const capacity = parseInt(document.getElementById('c-capacity').value) || 100;
+  const price = parseFloat(document.getElementById('c-price').value) || 0;
+  const online = document.getElementById('c-online').checked;
+
+  if (!title || !date) { showToast('⚠️', 'Please add a title and date.'); return; }
+
+  const newEvent = {
+    id: 'e-' + Date.now(),
+    title, description: desc || 'Join us for this exciting event!',
+    date, time: time || '18:00', location: online ? 'Online' : location,
+    category, capacity, price, grad: selectedColor, online,
+    attendees: []
+  };
+
+  events.unshift(newEvent);
+
+  // Reset form
+  ['c-title','c-desc','c-date','c-time','c-location','c-capacity','c-price'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('c-online').checked = false;
+
+  showToast('🎉', 'Event published successfully!');
+  showView('dashboard');
+}
+
+// ===== CLOSE MODALS ON OVERLAY CLICK =====
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', function(e) {
+    if (e.target === this) closeModal(this.id);
+  });
+});
+
+// ===== INIT =====
+renderEvents();
+</script>
+</body>
+</html>
