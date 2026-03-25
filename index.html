@@ -858,7 +858,7 @@ async function toggleCheckIn(eventId, attendeeId) {
 
   document.getElementById('stat-checked').textContent =
     events.reduce((acc,ev) => acc + ev.attendees.filter(at=>at.checkedIn).length, 0);
-  showToast(next?'✓':'↩', a.name + (next?' checked in!'>' check-in removed.'));
+  showToast(next?'✓':'↩', a.name + (next?' checked in!':' check-in removed.'));
 }
 
 function showDashQR(eventId, attendeeId) {
